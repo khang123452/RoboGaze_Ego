@@ -147,18 +147,10 @@ uv run python scripts/evaluate.py \
 If you find RoboGaze useful for your research, please cite:
 
 ```bibtex
-@misc{nguyen2026robogaze,
-  title   = {RoboGaze: Evaluating Robot World Models via
-             Structured Vision-Language Analysis},
-  author  = {Nguyen, Minh-Loi and Diep, Nghiem Tuong and Nguyen, Hung Khang and
-             Le, Minh and Le Thien, Doanh and Tran, Hoang H. and Le, Dung D. and
-             Duong, Vu N. and Sonntag, Daniel and Le, An Thai and Nguyen, Duy Minh Ho and
-             Ngo, Vien Anh and Nhiem, Tran Van},
-  year    = {2026},
-  eprint  = {2606.28385},
-  archivePrefix = {arXiv},
-  primaryClass = {cs.RO},
-  doi     = {10.48550/arXiv.2606.28385},
-  url     = {https://arxiv.org/abs/2606.28385}
+@article{nguyen2026robogaze,
+  title={RoboGaze: Evaluating Robot World Models via Structured Vision-Language Analysis},
+  author={Nguyen, Minh-Loi and Diep, Nghiem Tuong and Nguyen, Hung Khang and Le, Minh and Thien, Doanh Le and Tran, Hoang H and Le, Dung D and Duong, Vu N and Sonntag, Daniel and Le, An Thai and others},
+  journal={arXiv preprint arXiv:2606.28385},
+  year={2026}
 }
 ```
