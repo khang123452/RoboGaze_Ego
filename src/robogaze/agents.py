@@ -20,7 +20,7 @@ from .schemas import (
     BoundaryRefinement,
     CoarseCandidate,
     GlitchHypothesis,
-    RobotEntity,
+    HandEntity,
     SceneMemory,
     SceneEntity,
     SubgoalSegment,
@@ -35,7 +35,7 @@ from .schemas import (
     ViewBank,
     ViewWindow,
     WindowEntityState,
-    WindowRobotState,
+    WindowHandState,
     WindowStateMemory,
     WorkspaceLayout,
 )
@@ -135,7 +135,7 @@ def heuristic_task_memory(task_instruction: str) -> TaskMemory:
         explicit_constraints.append(f"{obj} should end on {receptacle}")
 
     obj = target_objects[0] if target_objects else "target object"
-    eff = required_effector or "robot hand/gripper"
+    eff = required_effector or "hand"
     goal_condition = None
     if target_receptacles:
         goal_condition = f"{obj} should be placed on {target_receptacles[0]}"
@@ -169,11 +169,11 @@ def build_scene_memory(
     fallback = SceneMemory(
         initial_frame_path=path,
         visible_objects=[entity.name for entity in fallback_entities],
-        visible_robot_parts=[],
+        visible_hand_parts=[],
         workspace_description="",
         initial_scene_description="",
         scene_entities=fallback_entities,
-        robot_entities=[],
+        hand_entities=[],
         workspace_layout=WorkspaceLayout(),
     )
     if client is None:
@@ -550,21 +550,21 @@ def _scene_memory_from_raw(raw: dict, fallback: SceneMemory) -> SceneMemory:
             data[key] = raw[key]
     data["initial_frame_path"] = fallback.initial_frame_path
     data["visible_objects"] = _string_list(data.get("visible_objects"))
-    data["visible_robot_parts"] = _string_list(data.get("visible_robot_parts"))
+    data["visible_hand_parts"] = _string_list(data.get("visible_hand_parts"))
     data["workspace_description"] = str(data.get("workspace_description") or "")
     data["initial_scene_description"] = str(data.get("initial_scene_description") or "")
     data["scene_entities"] = _scene_entities_from_raw(data.get("scene_entities"), fallback.scene_entities)
-    data["robot_entities"] = _robot_entities_from_raw(data.get("robot_entities"))
+    data["hand_entities"] = _hand_entities_from_raw(data.get("hand_entities"))
     data["workspace_layout"] = _workspace_layout_from_raw(data.get("workspace_layout"), fallback.workspace_layout)
     data.pop("reference_uncertainties", None)
     data.pop("uncertainty_notes", None)
     if not data["visible_objects"]:
         data["visible_objects"] = [entity.name for entity in data["scene_entities"]]
-    if not data["visible_robot_parts"]:
+    if not data["visible_hand_parts"]:
         parts: list[str] = []
-        for robot in data["robot_entities"]:
-            parts.extend(robot.visible_parts)
-        data["visible_robot_parts"] = list(dict.fromkeys(parts))
+        for hand in data["hand_entities"]:
+            parts.extend(hand.visible_parts)
+        data["visible_hand_parts"] = list(dict.fromkeys(parts))
     return SceneMemory(**data)
 
 
@@ -584,7 +584,7 @@ def _window_state_from_raw(
         time_range=time_range,
         frame_range=frame_range,
         entities=_window_entities_from_raw(raw.get("entities"), scene_memory),
-        robot=_window_robot_from_raw(raw.get("robot"), fallback.robot),
+        hands=_window_hand_from_raw(raw.get("hands"), fallback.hands),
         subgoal_status=_subgoal_status_from_raw(raw.get("subgoal_status"), subgoal_ids),
     )
 
@@ -817,8 +817,8 @@ def _default_subgoal_checks(target_object: str) -> list[SubgoalCheck]:
             subgoal_id="S1",
             description="approach the target object",
             action_type="approach",
-            success_evidence=[f"robot moves near {obj}"],
-            failure_evidence=[f"robot never approaches {obj}"],
+            success_evidence=[f"hand moves near {obj}"],
+            failure_evidence=[f"hand never approaches {obj}"],
             allowed_variations=["approach direction may vary"],
         ),
         SubgoalCheck(
@@ -826,9 +826,9 @@ def _default_subgoal_checks(target_object: str) -> list[SubgoalCheck]:
             description="interact with the target object",
             action_type="grasp",
             success_evidence=[
-                f"robot contacts, grasps, pushes, pulls, opens, or otherwise manipulates {obj}"
+                f"hand contacts, grasps, pushes, pulls, opens, or otherwise manipulates {obj}"
             ],
-            failure_evidence=["robot interacts only with a non-target object"],
+            failure_evidence=["hand interacts only with a non-target object"],
             allowed_variations=["the exact manipulation strategy may vary"],
         ),
         SubgoalCheck(
@@ -896,7 +896,7 @@ def _fallback_window_state(
             )
             for entity in scene_memory.scene_entities
         ],
-        robot=WindowRobotState(),
+        hands=WindowHandState(),
         subgoal_status={check.subgoal_id: "uncertain" for check in task_memory.subgoal_checks},
     )
 
@@ -997,17 +997,17 @@ def _scene_entities_from_raw(value: Any, fallback: list[SceneEntity]) -> list[Sc
     return out or fallback
 
 
-def _robot_entities_from_raw(value: Any) -> list[RobotEntity]:
+def _hand_entities_from_raw(value: Any) -> list[HandEntity]:
     if not isinstance(value, list):
         return []
-    out: list[RobotEntity] = []
+    out: list[HandEntity] = []
     for i, item in enumerate(value, start=1):
         if not isinstance(item, dict):
             continue
         out.append(
-            RobotEntity(
-                entity_id=str(item.get("entity_id") or f"robot_{i}"),
-                name=str(item.get("name") or "robot"),
+            HandEntity(
+                entity_id=str(item.get("entity_id") or f"hand_{i}"),
+                name=str(item.get("name") or "hand"),
                 visible_parts=_string_list(item.get("visible_parts")),
                 side_identity=str(item.get("side_identity") or "uncertain"),
                 uncertainty=str(item.get("uncertainty") or ""),
@@ -1068,10 +1068,10 @@ def _window_entities_from_raw(value: Any, scene_memory: SceneMemory) -> list[Win
     return out
 
 
-def _window_robot_from_raw(value: Any, fallback: WindowRobotState) -> WindowRobotState:
+def _window_hand_from_raw(value: Any, fallback: WindowHandState) -> WindowHandState:
     if not isinstance(value, dict):
         return fallback
-    return WindowRobotState(
+    return WindowHandState(
         visible=_bool_or(value.get("visible"), fallback.visible),
         action=_one_of(
             value.get("action"),

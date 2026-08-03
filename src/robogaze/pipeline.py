@@ -33,7 +33,7 @@ from .schemas import (
     EntitySummary,
     GlitchHypothesis,
     GlitchReport,
-    RobotSummary,
+    HandSummary,
     SHORT_ACTION_TYPES,
     SceneMemory,
     SubgoalSegment,
@@ -821,7 +821,7 @@ def _make_subgoal_segment(
         source_windows=source_windows,
         may_contain_subgoals=[],
         entity_summary={},
-        robot_summary=None,
+        hand_summary=None,
     )
 
 
@@ -876,10 +876,10 @@ def _fill_state_summaries(
             )
             for entity_id, entries in per_entity.items()
         }
-        segment.robot_summary = RobotSummary(
-            visible=any(state.robot.visible for state in states),
-            action=_max_by([state.robot for state in states], "action", ACTION_PRIORITY),
-            contact_with_target=_max_by([state.robot for state in states], "contact_with_target", CONTACT_PRIORITY),
+        segment.hand_summary = HandSummary(
+            visible=any(state.hands.visible for state in states),
+            action=_max_by([state.hands for state in states], "action", ACTION_PRIORITY),
+            contact_with_target=_max_by([state.hands for state in states], "contact_with_target", CONTACT_PRIORITY),
         )
 
 

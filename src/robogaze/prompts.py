@@ -1,15 +1,26 @@
-"""Prompt templates for RoboGaze VLM stages."""
+"""Prompt templates for RoboGaze-Ego VLM stages.
+
+Adapted from upstream RoboGaze (generated robot-manipulation video QA) for
+real egocentric human hand-manipulation footage evaluated against the
+VinRobotics Egocentric Manipulation Data technical specification. "Robot"
+language has been replaced with "hand" language throughout, since there is
+no generated embodiment to hallucinate -- the subject is a human hand
+performing a task instruction, filmed first-person. A new spec_compliance
+dimension checks acquisition-spec conformance (hand visibility, idle-time
+ratio, environment/object-type rules, camera framing) that has no analogue
+in the original generation-QA taxonomy.
+"""
 
 from __future__ import annotations
 
-TASK_MEMORY_SYSTEM = """You parse robotics manipulation instructions for video glitch evaluation.
+TASK_MEMORY_SYSTEM = """You parse egocentric hand-manipulation task instructions for video glitch evaluation.
 
 Return strict JSON matching this schema:
 {
   "raw_instruction": "string",
   "target_objects": ["object names"],
   "target_receptacles": ["target locations or receptacles"],
-  "required_effector": "right hand | left hand | right gripper | left gripper | null",
+  "required_effector": "right hand | left hand | both hands | null",
   "goal_condition": "short final-state condition or null",
   "explicit_constraints": ["explicit instruction constraints"],
   "expected_subgoals": ["ordered visually checkable subgoals"],
@@ -18,8 +29,8 @@ Return strict JSON matching this schema:
       "subgoal_id": "S1",
       "description": "approach the target object",
       "action_type": "approach | contact | grasp | hold | transfer | place | release | retreat | other",
-      "success_evidence": ["robot moves near the target object"],
-      "failure_evidence": ["robot never approaches the target object"],
+      "success_evidence": ["hand moves near the target object"],
+      "failure_evidence": ["hand never approaches the target object"],
       "allowed_variations": ["approach direction may vary"]
     }
   ]
@@ -35,7 +46,7 @@ Rules:
 - Output ONLY valid JSON. No markdown fences."""
 
 
-SCENE_MEMORY_SYSTEM = """You build static scene memory for a robotics video glitch evaluator.
+SCENE_MEMORY_SYSTEM = """You build static scene memory for an egocentric hand-manipulation video glitch evaluator.
 
 You will see the initial frame and the task memory. Describe only what is visible in the initial frame.
 
@@ -43,7 +54,7 @@ Return strict JSON matching this schema:
 {
   "initial_frame_path": "string",
   "visible_objects": ["objects visible in the scene"],
-  "visible_robot_parts": ["robot parts visible in the scene"],
+  "visible_hand_parts": ["hand parts visible in the scene, e.g. left palm, right fingers"],
   "workspace_description": "short description of table/workspace/layout",
   "initial_scene_description": "1-3 sentence factual description of the initial scene",
   "scene_entities": [
@@ -57,17 +68,17 @@ Return strict JSON matching this schema:
       "visibility": "visible | partially_visible | uncertain"
     }
   ],
-  "robot_entities": [
+  "hand_entities": [
     {
-      "entity_id": "robot_1",
-      "name": "robot arm",
-      "visible_parts": ["arm", "gripper"],
+      "entity_id": "hand_1",
+      "name": "right hand",
+      "visible_parts": ["palm", "fingers"],
       "side_identity": "known | uncertain"
     }
   ],
   "workspace_layout": {
     "surface": "tabletop | shelf | drawer area | unclear",
-    "camera_view": "fixed third-person view | egocentric | unclear",
+    "camera_view": "egocentric first-person | unclear",
     "spatial_description": "short stable layout description"
   }
 }
@@ -80,7 +91,7 @@ Rules:
 - Output ONLY valid JSON. No markdown fences."""
 
 
-UNIVERSAL_AGENT_INSTRUCTION = """You are part of a robotics video glitch evaluation framework.
+UNIVERSAL_AGENT_INSTRUCTION = """You are part of an egocentric hand-manipulation video glitch evaluation framework.
 
 You must detect only glitches relevant to your assigned dimension.
 Do not report issues outside your dimension.
@@ -111,7 +122,7 @@ the temporal span; do not reason about task intent or subgoal labels. Use
 scene_memory entity IDs to refer to objects."""
 
 
-WINDOW_STATE_MEMORY_SYSTEM = """You build window_state_memory for a robotics video glitch evaluator.
+WINDOW_STATE_MEMORY_SYSTEM = """You build window_state_memory for an egocentric hand-manipulation video glitch evaluator.
 
 You are given task_memory, scene_memory, video metadata, and exactly one evaluated video window.
 
@@ -134,7 +145,7 @@ Return strict JSON matching this schema:
       "evidence": "short visible evidence"
     }
   ],
-  "robot": {
+  "hands": {
     "visible": true,
     "action": "approaching | contacting | manipulating | carrying | releasing | idle | uncertain",
     "contact_with_target": "yes | no | possible | occluded | uncertain"
@@ -154,14 +165,14 @@ Rules:
 - Output ONLY valid JSON. No markdown fences."""
 
 
-COARSE_ROUTER_SUBGOAL_SYSTEM = """You are the coarse router for a robotics video glitch detector using subgoal-anchored perception.
+COARSE_ROUTER_SUBGOAL_SYSTEM = """You are the coarse router for an egocentric hand-manipulation video glitch detector using subgoal-anchored perception.
 
 Input:
 - Task memory
 - Scene memory
 - Video metadata
 - Exactly one SubgoalSegment with: subgoal_id, status, action_type, is_short_action,
-  may_contain_subgoals, entity_summary, robot_summary
+  may_contain_subgoals, entity_summary, hand_summary
 - Reference frames (initial / final as relevant)
 - The subgoal video clip
 
@@ -173,9 +184,10 @@ Dimensions:
 - task_progress
 - instruction_consistency
 - object_scene_consistency
-- robot_body_consistency
+- hand_body_consistency
 - physical_plausibility
 - visual_quality
+- spec_compliance
 
 Guidelines:
 - Return one candidate row for each distinct concern in this subgoal clip.
@@ -187,13 +199,14 @@ Guidelines:
   dimensions; put related dimensions in the same candidate row.
 - If is_short_action is true, the action moment is brief inside the clip; judge the transition using the before/after context the clip already includes.
 - If may_contain_subgoals is non-empty, other subgoals' actions may also appear in this clip; judge only the action assigned to this segment.
-- Use entity_summary / robot_summary as factual priors; trust the clip for visual judgment.
+- Use entity_summary / hand_summary as factual priors; trust the clip for visual judgment.
 - If the subgoal is failed, uncertain, or in_progress at video end, route task_progress unless the metadata clearly explains a normal reason.
 - If object identity, location, visibility, or before/after state is suspicious, route object_scene_consistency.
 - If object motion, contact, support, penetration, or impossible dynamics are suspicious, route physical_plausibility.
-- If robot limbs, gripper identity, or body continuity are suspicious, route robot_body_consistency.
+- If hand visibility, hand identity (left/right), grasp contact clarity, or hand-pose tracking plausibility are suspicious, route hand_body_consistency.
 - If an explicit instruction constraint may be violated, route instruction_consistency.
-- If the video quality itself makes the phase unreliable, route visual_quality.
+- If the video quality itself makes the phase unreliable (blur, exposure, encoding, camera shake), route visual_quality.
+- If the clip may violate the acquisition spec itself -- both hands not visible during manipulation, excessive idle time, non-rigid object being manipulated, outdoor/disallowed environment, moving background clutter, or camera framing that is not eye-level/downward-angled/landscape -- route spec_compliance.
 - Use the subgoal span as the candidate span unless evidence clearly crosses into an adjacent phase.
 - Do not invent glitches without visual evidence.
 
@@ -281,7 +294,7 @@ TASK_PROGRESS_SYSTEM = (
 You are the Task-Progress Agent.
 
 Your job:
-Evaluate whether the robot appears to complete the assigned subgoal and the overall task.
+Evaluate whether the hand appears to complete the assigned subgoal and the overall task.
 
 Focus on:
 - task_incompletion
@@ -308,45 +321,51 @@ OBJECT_SCENE_CONSISTENCY_SYSTEM = (
 You are the Object-Scene Consistency Agent.
 
 Your job:
-Detect visual or semantic inconsistency of objects relative to the initial scene.
+Detect visual or tracking inconsistency of objects relative to the initial scene.
 
 Focus on:
-- object_hallucination
 - object_disappearance
 - object_identity_swap
 - object_distortion
-- object_color_or_shape_drift
+- unexpected_object_appearance
+- object_state_mislabel
 
 Important:
 Use the initial frame and scene_memory entities as reference.
 Do not report normal perspective changes or occlusions as glitches unless they are severe.
-If the object is briefly hidden by the robot, that is not necessarily disappearance.
-Report only when the object is inconsistent, distorted, duplicated, or missing unexpectedly.
+If the object is briefly hidden by the hand, that is not necessarily disappearance.
+Report only when the object is inconsistent, distorted, or missing/appearing unexpectedly.
 
 """
     + HYPOTHESIS_SCHEMA
 )
 
 
-ROBOT_BODY_CONSISTENCY_SYSTEM = (
+HAND_BODY_CONSISTENCY_SYSTEM = (
     UNIVERSAL_AGENT_INSTRUCTION
     + DIMENSION_PURE_AGENT_SUFFIX
     + """
 
-You are the Robot-Body Consistency Agent.
+You are the Hand-Body Consistency Agent.
 
 Your job:
-Detect visual inconsistency in the robot body.
+Detect visual inconsistency or unreliability of the demonstrator's hand(s) as evidence for
+downstream imitation-learning use.
 
 Focus on:
-- hallucinated_robot_part
-- missing_robot_part
-- duplicated_arm_or_gripper
-- robot_body_deformation
-- left_right_robot_identity_confusion
+- hand_occluded_during_manipulation
+- single_hand_only_during_bimanual_task
+- hand_object_contact_ambiguous
+- hand_pose_tracking_implausible
+- left_right_hand_identity_confusion
 
 Important:
-Do not confuse occlusion with missing robot part unless it persists or is visually implausible.
+This is real footage, not a generated video -- there is no hallucinated hand to detect.
+The concern is whether the hand(s) are visible and trackable enough to be usable, not whether
+the hand looks "correct" in isolation.
+Do not confuse brief natural occlusion with a genuine glitch unless it persists during a moment
+that matters (grasp, contact, release) or is visually implausible (e.g. anatomically impossible
+finger pose).
 
 """
     + HYPOTHESIS_SCHEMA
@@ -361,7 +380,10 @@ PHYSICAL_PLAUSIBILITY_SYSTEM = (
 You are the Physical-Plausibility Agent.
 
 Your job:
-Detect obvious physical impossibilities in the video.
+Detect obvious physical impossibilities or tracking artifacts in the video. Since this is real
+footage, most physical-plausibility issues will trace back to occlusion, motion blur, or sensor
+artifacts rather than a generative hallucination -- describe what is visually apparent regardless
+of cause.
 
 Focus on:
 - object_teleportation
@@ -389,14 +411,14 @@ VISUAL_QUALITY_SYSTEM = (
 You are the Visual-Quality Agent.
 
 Your job:
-Detect whether parts of the video are visually unreliable.
+Detect whether parts of the video are visually unreliable due to capture quality.
 
 Focus on:
-- blur
-- occlusion
-- frame_corruption
+- motion_blur
+- exposure_or_white_balance_issue
+- encoding_or_resolution_artifact
 - camera_instability
-- low_visibility
+- frame_corruption
 
 Important:
 Poor quality is itself a glitch only if it affects interpretation.
@@ -407,20 +429,59 @@ If quality is mild and the action remains clear, severity should be low.
 )
 
 
+SPEC_COMPLIANCE_SYSTEM = (
+    UNIVERSAL_AGENT_INSTRUCTION
+    + DIMENSION_PURE_AGENT_SUFFIX
+    + """
+
+You are the Spec-Compliance Agent.
+
+Your job:
+Check the clip against the binding VinRobotics egocentric-data acquisition requirements. These
+are contractual thresholds, not generation glitches -- report a violation whenever the visible
+evidence in this span clearly falls outside the requirement, even if the footage looks otherwise
+normal.
+
+Focus on:
+- hands_not_both_visible: both hands must be visible while interacting with an object; flag if
+  only one hand (or neither) is visible during a manipulation moment that plausibly requires both.
+- excessive_idle_time: idle (non-manipulation) frames must stay under 20% of a clip and active
+  manipulation should exceed 80%; flag spans that are clearly idle (no hand-object interaction,
+  no approach/retreat in progress).
+- non_rigid_object_manipulation: only rigid-object manipulation is permitted; flag if the
+  manipulated object is visibly soft/deformable (cloth, food, etc.).
+- disallowed_environment_or_background_motion: only indoor environments with minimal background
+  movement are permitted; flag outdoor scenes or visible background motion (people walking
+  through, moving furniture, etc.) unrelated to the manipulation itself.
+- camera_framing_violation: the camera should be eye-level, angled downward, and landscape
+  orientation with the full manipulating hand(s) in frame; flag clips that are clearly not
+  egocentric (e.g. third-person), portrait-oriented, or framed so the hands are cut off.
+
+Important:
+Only report a spec violation with direct visible evidence in this span. Do not guess at
+frame-rate, bitrate, IMU sync, or other requirements that cannot be judged from the visual frames
+themselves -- those are checked by non-visual tooling elsewhere.
+
+"""
+    + HYPOTHESIS_SCHEMA
+)
+
+
 SPECIALIST_SYSTEM_PROMPTS = {
     "instruction_consistency": INSTRUCTION_CONSISTENCY_SYSTEM,
     "task_progress": TASK_PROGRESS_SYSTEM,
     "object_scene_consistency": OBJECT_SCENE_CONSISTENCY_SYSTEM,
-    "robot_body_consistency": ROBOT_BODY_CONSISTENCY_SYSTEM,
+    "hand_body_consistency": HAND_BODY_CONSISTENCY_SYSTEM,
     "physical_plausibility": PHYSICAL_PLAUSIBILITY_SYSTEM,
     "visual_quality": VISUAL_QUALITY_SYSTEM,
+    "spec_compliance": SPEC_COMPLIANCE_SYSTEM,
 }
 
 
 TASK_AWARE_DIMENSIONS = {"task_progress", "instruction_consistency"}
 
 
-VERIFIER_SYSTEM = """You are the Verifier for a robotics video glitch detector.
+VERIFIER_SYSTEM = """You are the Verifier for an egocentric hand-manipulation video glitch detector.
 
 You are given:
 - Task memory
@@ -504,10 +565,9 @@ Return JSON:
   "refined_end_frame": 180,
   "confidence": 0.76,
   "boundary_evidence": [
-    "At 3.2s the left gripper first contacts/manipulates the apple.",
+    "At 3.2s the left hand first contacts/manipulates the apple.",
     "The wrong-effector behavior continues until the end."
   ]
 }
 
 Output ONLY valid JSON. No markdown fences."""
-

@@ -1,4 +1,8 @@
-# RoboGaze: Evaluating Robot World Models via Structured Vision-Language Analysis
+# RoboGaze-Ego: Structured Vision-Language QA for Egocentric Hand-Manipulation Data
+
+Fork of [RoboGaze](https://github.com/cair-vinuni/RoboGaze) adapted for real egocentric
+(first-person) human hand-manipulation footage sourced against the VinRobotics Egocentric
+Manipulation Data technical specification, rather than generated robot-manipulation video.
 
 <p align="center">
   <img src="assets/robogaze_overview.jpg" alt="RoboGaze overview" width="100%">
@@ -10,18 +14,18 @@
   <img src="https://img.shields.io/badge/Code-Released-orange" alt="Code Released">
 </p>
 
-RoboGaze is a training-free, multi-agent VLM framework for diagnosing failures in generated robot-manipulation videos. Given a task instruction, an initial frame, and a generated execution video, RoboGaze produces a structured report that explains what failed, when it failed, why it failed, and how severe the failure is.
+RoboGaze-Ego is a training-free, multi-agent VLM framework for diagnosing failures and spec violations in real egocentric hand-manipulation clips. Given a task instruction, an initial frame, and a recorded execution video, RoboGaze-Ego produces a structured report that explains what failed, when it failed, why it failed, and how severe the failure is.
 
-This repository contains the official RoboGaze code release, including the local inference pipeline, OpenAI-compatible VLM client, batch runners, evaluation utilities, and static project page assets.
+This repository contains the local inference pipeline, OpenAI-compatible VLM client, batch runners, and evaluation utilities, forked from RoboGaze and re-targeted at real (not generated) egocentric footage.
 
 ## Overview
 
-Robot world models can generate visually plausible manipulation rollouts that still violate task logic, physical plausibility, robot-body consistency, or object-scene consistency. Scalar metrics and monolithic VLM judges often miss these errors or over-report failures in clean clips.
+Egocentric hand-manipulation clips can be visually plausible but still violate task logic, hand-body trackability, object-scene consistency, or the binding acquisition spec (hand visibility, idle-time ratio, environment/object-type rules, camera framing). Scalar metrics and monolithic VLM judges often miss these errors or over-report failures in clean clips.
 
-RoboGaze addresses this with a three-stage diagnostic pipeline:
+RoboGaze-Ego addresses this with a three-stage diagnostic pipeline over **7 dimensions** (task_progress, instruction_consistency, object_scene_consistency, hand_body_consistency, physical_plausibility, visual_quality, spec_compliance):
 
-1. **Task-scene grounding**: parses the instruction and initial frame into task memory, scene memory, expected subgoals, visible objects, robot parts, and layout information.
-2. **Specialist routing**: identifies suspicious temporal spans and dispatches them to dimension-specific agents over a robotics failure taxonomy.
+1. **Task-scene grounding**: parses the instruction and initial frame into task memory, scene memory, expected subgoals, visible objects, hand parts, and layout information.
+2. **Specialist routing**: identifies suspicious temporal spans and dispatches them to dimension-specific agents over the taxonomy above.
 3. **Critic verification**: re-examines candidate glitches, rejects weak hypotheses, merges duplicates, refines temporal boundaries, and emits a final structured report.
 
 <p align="center">
@@ -44,8 +48,8 @@ The released implementation is intentionally transparent: intermediate JSON file
 ### 1. Clone and enter the repository
 
 ```bash
-git clone https://github.com/cair-vinuni/RoboGaze.git
-cd RoboGaze
+git clone https://github.com/khang123452/RoboGaze_Ego.git
+cd RoboGaze_Ego
 ```
 
 ### 2. Install core dependencies
@@ -144,7 +148,9 @@ uv run python scripts/evaluate.py \
 
 ## Citation
 
-If you find RoboGaze useful for your research, please cite:
+This is a fork of RoboGaze re-targeted at real egocentric hand-manipulation data; the taxonomy
+and prompts in `src/robogaze/` diverge from the upstream paper. If you find the underlying
+approach useful, please cite the original RoboGaze paper:
 
 ```bibtex
 @article{nguyen2026robogaze,

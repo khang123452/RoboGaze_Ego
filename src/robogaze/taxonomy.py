@@ -1,4 +1,19 @@
-"""Initial RoboGaze glitch taxonomy and deterministic routing maps."""
+"""RoboGaze-Ego glitch taxonomy and deterministic routing maps.
+
+Adapted from the original RoboGaze robot-generation taxonomy for real
+egocentric (first-person) human hand-manipulation footage sourced against
+the VinRobotics Egocentric Manipulation Data technical specification. Two
+changes from the upstream taxonomy:
+
+- `robot_body_consistency` is replaced by `hand_body_consistency`, since
+  there is no generated robot embodiment to hallucinate/deform -- the
+  concern instead is whether the human hands are trackable, correctly
+  identified, and consistent with the required-effector constraint.
+- A new `spec_compliance` dimension checks each clip against the binding
+  acquisition requirements in the tech spec (hand visibility, idle-frame
+  ratio, activity density, environment/object-type constraints, background
+  motion, camera framing) that have no analogue in a generation-QA tool.
+"""
 
 from __future__ import annotations
 
@@ -18,18 +33,18 @@ GLITCH_TYPES = {
         "ambiguous_task_success",
     ],
     "object_scene_consistency": [
-        "object_hallucination",
         "object_disappearance",
         "object_identity_swap",
         "object_distortion",
-        "object_color_or_shape_drift",
+        "unexpected_object_appearance",
+        "object_state_mislabel",
     ],
-    "robot_body_consistency": [
-        "hallucinated_robot_part",
-        "missing_robot_part",
-        "duplicated_arm_or_gripper",
-        "robot_body_deformation",
-        "left_right_robot_identity_confusion",
+    "hand_body_consistency": [
+        "hand_occluded_during_manipulation",
+        "single_hand_only_during_bimanual_task",
+        "hand_object_contact_ambiguous",
+        "hand_pose_tracking_implausible",
+        "left_right_hand_identity_confusion",
     ],
     "physical_plausibility": [
         "object_teleportation",
@@ -39,11 +54,18 @@ GLITCH_TYPES = {
         "grasp_without_visible_support",
     ],
     "visual_quality": [
-        "blur",
-        "occlusion",
-        "frame_corruption",
+        "motion_blur",
+        "exposure_or_white_balance_issue",
+        "encoding_or_resolution_artifact",
         "camera_instability",
-        "low_visibility",
+        "frame_corruption",
+    ],
+    "spec_compliance": [
+        "hands_not_both_visible",
+        "excessive_idle_time",
+        "non_rigid_object_manipulation",
+        "disallowed_environment_or_background_motion",
+        "camera_framing_violation",
     ],
 }
 
@@ -59,9 +81,10 @@ DIMENSION_TO_AGENT = {
     "task_progress": ["task_progress"],
     "instruction_consistency": ["instruction_consistency"],
     "object_scene_consistency": ["object_scene_consistency"],
-    "robot_body_consistency": ["robot_body_consistency"],
+    "hand_body_consistency": ["hand_body_consistency"],
     "physical_plausibility": ["physical_plausibility"],
     "visual_quality": ["visual_quality"],
+    "spec_compliance": ["spec_compliance"],
 }
 
 AGENT_TO_DIMENSION = {
@@ -81,26 +104,31 @@ DEFAULT_SEVERITY_BY_TYPE = {
     "failed_placement": 4,
     "premature_termination": 4,
     "ambiguous_task_success": 3,
-    "object_hallucination": 4,
     "object_disappearance": 5,
     "object_identity_swap": 4,
     "object_distortion": 3,
-    "object_color_or_shape_drift": 3,
-    "hallucinated_robot_part": 5,
-    "missing_robot_part": 4,
-    "duplicated_arm_or_gripper": 5,
-    "robot_body_deformation": 4,
-    "left_right_robot_identity_confusion": 4,
+    "unexpected_object_appearance": 3,
+    "object_state_mislabel": 3,
+    "hand_occluded_during_manipulation": 3,
+    "single_hand_only_during_bimanual_task": 4,
+    "hand_object_contact_ambiguous": 3,
+    "hand_pose_tracking_implausible": 4,
+    "left_right_hand_identity_confusion": 4,
     "object_teleportation": 5,
     "object_floating": 4,
     "object_penetration": 4,
     "impossible_motion": 4,
     "grasp_without_visible_support": 4,
-    "blur": 2,
-    "occlusion": 2,
-    "frame_corruption": 3,
+    "motion_blur": 2,
+    "exposure_or_white_balance_issue": 2,
+    "encoding_or_resolution_artifact": 3,
     "camera_instability": 2,
-    "low_visibility": 2,
+    "frame_corruption": 3,
+    "hands_not_both_visible": 4,
+    "excessive_idle_time": 3,
+    "non_rigid_object_manipulation": 3,
+    "disallowed_environment_or_background_motion": 3,
+    "camera_framing_violation": 3,
 }
 
 

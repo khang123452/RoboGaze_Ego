@@ -41,7 +41,7 @@ PROMPT_VERSION = "v1"
 DATASET_NAMES = {"gr1_real", "gr1_sim", "droid_mv"}
 
 PROMPT_HEADER = """SYSTEM:
-You are a strict scoring judge for a robotics video glitch evaluation. You compare a *predicted* glitch description against a *reference* (ground-truth) glitch description. Both descriptions refer to the same video. You do NOT see the video. You score based on the textual content alone and treat the reference as authoritative.
+You are a strict scoring judge for an egocentric hand-manipulation video glitch evaluation. You compare a *predicted* glitch description against a *reference* (ground-truth) glitch description. Both descriptions refer to the same video. You do NOT see the video. You score based on the textual content alone and treat the reference as authoritative.
 
 Return STRICT JSON only, no markdown fences, no preamble. Schema:
 {
@@ -85,13 +85,13 @@ predicted_description: "The Rubik's cube exhibits visual corruption during trans
 JSON: {"event_faithfulness": 5, "specificity": 4, "causal_correctness": 4, "rationale": "Same event, same object, same phase; prediction adds a sphere detail consistent with reference morph."}
 
 Example 2 (partial credit):
-reference_description: "The orange ball levitates above the gripper for ~1 second before falling."
-predicted_description: "The robot picks up the orange ball but it is unclear whether the ball is fully grasped before lifting."
+reference_description: "The orange ball levitates above the hand for ~1 second before falling."
+predicted_description: "The hand picks up the orange ball but it is unclear whether the ball is fully grasped before lifting."
 JSON: {"event_faithfulness": 3, "specificity": 3, "causal_correctness": 2, "rationale": "Same object and similar moment but reference is about levitation/no-support while prediction is about grasp ambiguity."}
 
 Example 3 (wrong event):
-reference_description: "The robot uses the wrong (right) hand instead of the instructed left hand."
-predicted_description: "The dragonfruit appears to penetrate the gripper geometry briefly."
+reference_description: "The demonstrator uses the wrong (right) hand instead of the instructed left hand."
+predicted_description: "The dragonfruit appears to penetrate the hand geometry briefly."
 JSON: {"event_faithfulness": 0, "specificity": 0, "causal_correctness": 0, "rationale": "Different phenomena."}
 
 NOW SCORE THE FOLLOWING PAIR.

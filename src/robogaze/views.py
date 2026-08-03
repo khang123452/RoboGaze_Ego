@@ -658,8 +658,9 @@ SUBGOAL_MODE_VIEWS = {
     "instruction_consistency": ("initial_frame", "sg_prior", "sg_current", "sg_next"),
     "object_scene_consistency": ("initial_frame", "sg_current"),
     "physical_plausibility": ("initial_frame", "sg_current"),
-    "robot_body_consistency": ("initial_frame", "sg_current"),
+    "hand_body_consistency": ("initial_frame", "sg_current"),
     "visual_quality": ("sg_current",),
+    "spec_compliance": ("initial_frame", "sg_prior", "sg_current", "sg_next"),
 }
 
 

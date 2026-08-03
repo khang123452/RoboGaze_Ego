@@ -10,9 +10,10 @@ DimensionName = Literal[
     "task_progress",
     "instruction_consistency",
     "object_scene_consistency",
-    "robot_body_consistency",
+    "hand_body_consistency",
     "physical_plausibility",
     "visual_quality",
+    "spec_compliance",
 ]
 
 ViewScale = Literal["global", "medium", "subgoal", "refined", "frame"]
@@ -45,7 +46,7 @@ EntityStateChange = Literal[
     "distorted",
     "uncertain",
 ]
-RobotAction = Literal[
+HandAction = Literal[
     "approaching",
     "contacting",
     "manipulating",
@@ -133,7 +134,7 @@ class SceneEntity(BaseModel):
     visibility: str = "visible"
 
 
-class RobotEntity(BaseModel):
+class HandEntity(BaseModel):
     entity_id: str
     name: str
     visible_parts: list[str] = Field(default_factory=list)
@@ -150,11 +151,11 @@ class WorkspaceLayout(BaseModel):
 class SceneMemory(BaseModel):
     initial_frame_path: str
     visible_objects: list[str]
-    visible_robot_parts: list[str]
+    visible_hand_parts: list[str]
     workspace_description: str
     initial_scene_description: str
     scene_entities: list[SceneEntity] = Field(default_factory=list)
-    robot_entities: list[RobotEntity] = Field(default_factory=list)
+    hand_entities: list[HandEntity] = Field(default_factory=list)
     workspace_layout: WorkspaceLayout = Field(default_factory=WorkspaceLayout)
 
 
@@ -168,9 +169,9 @@ class WindowEntityState(BaseModel):
     evidence: str = ""
 
 
-class WindowRobotState(BaseModel):
+class WindowHandState(BaseModel):
     visible: bool = False
-    action: RobotAction = "uncertain"
+    action: HandAction = "uncertain"
     contact_with_target: ContactStatus = "uncertain"
 
 
@@ -179,7 +180,7 @@ class WindowStateMemory(BaseModel):
     time_range: tuple[float, float]
     frame_range: tuple[int, int]
     entities: list[WindowEntityState] = Field(default_factory=list)
-    robot: WindowRobotState = Field(default_factory=WindowRobotState)
+    hands: WindowHandState = Field(default_factory=WindowHandState)
     subgoal_status: dict[str, SubgoalStatus] = Field(default_factory=dict)
 
 
@@ -191,9 +192,9 @@ class EntitySummary(BaseModel):
     state_change: EntityStateChange = "uncertain"
 
 
-class RobotSummary(BaseModel):
+class HandSummary(BaseModel):
     visible: bool = False
-    action: RobotAction = "uncertain"
+    action: HandAction = "uncertain"
     contact_with_target: ContactStatus = "uncertain"
 
 
@@ -211,7 +212,7 @@ class SubgoalSegment(BaseModel):
     source_windows: list[str] = Field(default_factory=list)
     may_contain_subgoals: list[str] = Field(default_factory=list)
     entity_summary: dict[str, EntitySummary] = Field(default_factory=dict)
-    robot_summary: RobotSummary | None = None
+    hand_summary: HandSummary | None = None
 
 
 class CoarseCandidate(BaseModel):
