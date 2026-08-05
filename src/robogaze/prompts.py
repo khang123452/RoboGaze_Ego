@@ -1,14 +1,14 @@
 """Prompt templates for RoboGaze-Ego VLM stages.
 
 Adapted from upstream RoboGaze (generated robot-manipulation video QA) for
-real egocentric human hand-manipulation footage evaluated against the
-VinRobotics Egocentric Manipulation Data technical specification. "Robot"
-language has been replaced with "hand" language throughout, since there is
-no generated embodiment to hallucinate -- the subject is a human hand
-performing a task instruction, filmed first-person. A new spec_compliance
-dimension checks acquisition-spec conformance (hand visibility, idle-time
-ratio, environment/object-type rules, camera framing) that has no analogue
-in the original generation-QA taxonomy.
+real egocentric human hand-manipulation footage. "Robot" language has been
+replaced with "hand" language throughout, since there is no generated
+embodiment to hallucinate -- the subject is a human hand performing a task
+instruction, filmed first-person. The generation-QA-flavored
+`physical_plausibility` dimension and the acquisition-spec-bound
+`spec_compliance` dimension from the original taxonomy are dropped here;
+see `taxonomy.py` for details and how to re-add a spec-compliance check
+against your own dataset's capture rules if needed.
 """
 
 from __future__ import annotations
@@ -185,9 +185,7 @@ Dimensions:
 - instruction_consistency
 - object_scene_consistency
 - hand_body_consistency
-- physical_plausibility
 - visual_quality
-- spec_compliance
 
 Guidelines:
 - Return one candidate row for each distinct concern in this subgoal clip.
@@ -202,11 +200,9 @@ Guidelines:
 - Use entity_summary / hand_summary as factual priors; trust the clip for visual judgment.
 - If the subgoal is failed, uncertain, or in_progress at video end, route task_progress unless the metadata clearly explains a normal reason.
 - If object identity, location, visibility, or before/after state is suspicious, route object_scene_consistency.
-- If object motion, contact, support, penetration, or impossible dynamics are suspicious, route physical_plausibility.
 - If hand visibility, hand identity (left/right), grasp contact clarity, or hand-pose tracking plausibility are suspicious, route hand_body_consistency.
 - If an explicit instruction constraint may be violated, route instruction_consistency.
 - If the video quality itself makes the phase unreliable (blur, exposure, encoding, camera shake), route visual_quality.
-- If the clip may violate the acquisition spec itself -- both hands not visible during manipulation, excessive idle time, non-rigid object being manipulated, outdoor/disallowed environment, moving background clutter, or camera framing that is not eye-level/downward-angled/landscape -- route spec_compliance.
 - Use the subgoal span as the candidate span unless evidence clearly crosses into an adjacent phase.
 - Do not invent glitches without visual evidence.
 
@@ -372,37 +368,6 @@ finger pose).
 )
 
 
-PHYSICAL_PLAUSIBILITY_SYSTEM = (
-    UNIVERSAL_AGENT_INSTRUCTION
-    + DIMENSION_PURE_AGENT_SUFFIX
-    + """
-
-You are the Physical-Plausibility Agent.
-
-Your job:
-Detect obvious physical impossibilities or tracking artifacts in the video. Since this is real
-footage, most physical-plausibility issues will trace back to occlusion, motion blur, or sensor
-artifacts rather than a generative hallucination -- describe what is visually apparent regardless
-of cause.
-
-Focus on:
-- object_teleportation
-- object_floating
-- object_penetration
-- impossible_motion
-- grasp_without_visible_support
-
-Important:
-Be conservative.
-Do not infer precise contact state.
-Only report clear physical inconsistencies visible in the views.
-If uncertain, request refinement.
-
-"""
-    + HYPOTHESIS_SCHEMA
-)
-
-
 VISUAL_QUALITY_SYSTEM = (
     UNIVERSAL_AGENT_INSTRUCTION
     + DIMENSION_PURE_AGENT_SUFFIX
@@ -429,52 +394,12 @@ If quality is mild and the action remains clear, severity should be low.
 )
 
 
-SPEC_COMPLIANCE_SYSTEM = (
-    UNIVERSAL_AGENT_INSTRUCTION
-    + DIMENSION_PURE_AGENT_SUFFIX
-    + """
-
-You are the Spec-Compliance Agent.
-
-Your job:
-Check the clip against the binding VinRobotics egocentric-data acquisition requirements. These
-are contractual thresholds, not generation glitches -- report a violation whenever the visible
-evidence in this span clearly falls outside the requirement, even if the footage looks otherwise
-normal.
-
-Focus on:
-- hands_not_both_visible: both hands must be visible while interacting with an object; flag if
-  only one hand (or neither) is visible during a manipulation moment that plausibly requires both.
-- excessive_idle_time: idle (non-manipulation) frames must stay under 20% of a clip and active
-  manipulation should exceed 80%; flag spans that are clearly idle (no hand-object interaction,
-  no approach/retreat in progress).
-- non_rigid_object_manipulation: only rigid-object manipulation is permitted; flag if the
-  manipulated object is visibly soft/deformable (cloth, food, etc.).
-- disallowed_environment_or_background_motion: only indoor environments with minimal background
-  movement are permitted; flag outdoor scenes or visible background motion (people walking
-  through, moving furniture, etc.) unrelated to the manipulation itself.
-- camera_framing_violation: the camera should be eye-level, angled downward, and landscape
-  orientation with the full manipulating hand(s) in frame; flag clips that are clearly not
-  egocentric (e.g. third-person), portrait-oriented, or framed so the hands are cut off.
-
-Important:
-Only report a spec violation with direct visible evidence in this span. Do not guess at
-frame-rate, bitrate, IMU sync, or other requirements that cannot be judged from the visual frames
-themselves -- those are checked by non-visual tooling elsewhere.
-
-"""
-    + HYPOTHESIS_SCHEMA
-)
-
-
 SPECIALIST_SYSTEM_PROMPTS = {
     "instruction_consistency": INSTRUCTION_CONSISTENCY_SYSTEM,
     "task_progress": TASK_PROGRESS_SYSTEM,
     "object_scene_consistency": OBJECT_SCENE_CONSISTENCY_SYSTEM,
     "hand_body_consistency": HAND_BODY_CONSISTENCY_SYSTEM,
-    "physical_plausibility": PHYSICAL_PLAUSIBILITY_SYSTEM,
     "visual_quality": VISUAL_QUALITY_SYSTEM,
-    "spec_compliance": SPEC_COMPLIANCE_SYSTEM,
 }
 
 

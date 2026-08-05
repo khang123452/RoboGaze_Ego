@@ -20,9 +20,9 @@ This repository contains the local inference pipeline, OpenAI-compatible VLM cli
 
 ## Overview
 
-Egocentric hand-manipulation clips can be visually plausible but still violate task logic, hand-body trackability, object-scene consistency, or the binding acquisition spec (hand visibility, idle-time ratio, environment/object-type rules, camera framing). Scalar metrics and monolithic VLM judges often miss these errors or over-report failures in clean clips.
+Egocentric hand-manipulation clips can be visually plausible but still violate task logic, hand-body trackability, or object-scene consistency. Scalar metrics and monolithic VLM judges often miss these errors or over-report failures in clean clips.
 
-RoboGaze-Ego addresses this with a three-stage diagnostic pipeline over **7 dimensions** (task_progress, instruction_consistency, object_scene_consistency, hand_body_consistency, physical_plausibility, visual_quality, spec_compliance):
+RoboGaze-Ego addresses this with a three-stage diagnostic pipeline over **5 dimensions** (task_progress, instruction_consistency, object_scene_consistency, hand_body_consistency, visual_quality):
 
 1. **Task-scene grounding**: parses the instruction and initial frame into task memory, scene memory, expected subgoals, visible objects, hand parts, and layout information.
 2. **Specialist routing**: identifies suspicious temporal spans and dispatches them to dimension-specific agents over the taxonomy above.

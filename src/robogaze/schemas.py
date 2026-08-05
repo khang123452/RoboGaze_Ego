@@ -11,9 +11,7 @@ DimensionName = Literal[
     "instruction_consistency",
     "object_scene_consistency",
     "hand_body_consistency",
-    "physical_plausibility",
     "visual_quality",
-    "spec_compliance",
 ]
 
 ViewScale = Literal["global", "medium", "subgoal", "refined", "frame"]
